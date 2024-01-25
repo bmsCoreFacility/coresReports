@@ -1,0 +1,27 @@
+core	year	month	itemCategory	itemNote	value
+bms	2023	11	income	Orbitrap Lumos	5520
+bms	2023	11	income	Qexactive	21000
+bms	2023	11	income	QTrap5500	600
+bms	2023	11	income	bioinformatics	0
+bms	2023	11	note	The hplc on the lumos is on its last legs. Need to replace soon.	
+bms	2023	11	note	Ordered new nitrogen generators to replace old units.	
+bms	2023	11	expense	consumables	5200
+bms	2023	11	expense	instrument parts	7900
+bms	2023	12	income	Orbitrap Lumos	5160
+bms	2023	12	income	Qexactive	19200
+bms	2023	12	income	QTrap5500	720
+bms	2023	12	income	bioinformatics	360
+bms	2023	12	note	The Orbitrap Lumos had a board failure on Dec. 22nd. It took Thermo until Jan. 11th to make the repair.	
+bms	2023	12	expense	consumables	4800
+bms	2023	12	expense	instrument parts	7900
+bms	2024	01	income	Orbitrap Lumos	14520
+bms	2024	01	income	Qexactive	34800
+bms	2024	01	income	QTrap5500	2160
+bms	2024	01	income	bioinformatics	720
+bms	2024	01	note	The Orbitrap Lumos had a board failure on Dec. 22nd. It took Thermo until Jan. 11th to make the repair.	
+bms	2024	01	note	The refurbished nitrogen generators arrived on-site and are awaiting install by the facilities team.	
+bms	2024	01	note	We have developed a new data-independent analysis pipeline as a service offering to our customers.	
+bms	2024	01	expense	consumables	2133.49
+bms	2024	01	expense	instrument parts	842
+bms	2024	01	expense	office supplies	215.24
+bms	2024	01	expense	service contract	9000

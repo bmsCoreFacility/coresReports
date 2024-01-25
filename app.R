@@ -74,6 +74,7 @@ coreNames = data.frame('CORE' = c('bms',
 ##build the UI
 ui = page_sidebar(
   title = "Cores Monthly Reports",
+  fillable = FALSE,
   
   ##sidebar
   sidebar = sidebar(
@@ -93,7 +94,7 @@ ui = page_sidebar(
   ),
   ##page
   layout_columns(
-    row_heights = c(1,1,0.75),
+    row_heights = c(0.75,0.75,0.75),
     col_widths = c(6,6,6,6,12),
     cards[[2]], cards[[3]], cards[[4]], cards[[5]], cards[[1]]
   )
@@ -113,7 +114,7 @@ server = function(input, output) {
   
   ##baseline input data processing
   inputData = reactive({
-    read_tsv('C:/Users/user/OneDrive - Dalhousie University/coresReports/coresMonthlyReportsData.tsv', show_col_types = FALSE,
+    read_tsv('coresMonthlyReportsData.tsv', show_col_types = FALSE,
              col_types = cols(year = col_character(),
                               month = col_character())) %>%
       dplyr::mutate(conDate = as.numeric(paste(year,month,sep=''))) %>%
