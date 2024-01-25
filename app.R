@@ -113,7 +113,7 @@ server = function(input, output) {
   
   ##baseline input data processing
   inputData = reactive({
-    read_tsv('C:/tempData/bmsCoreData.tsv', show_col_types = FALSE,
+    read_tsv('C:/Users/user/OneDrive - Dalhousie University/coresReports/coresMonthlyReportsData.tsv', show_col_types = FALSE,
              col_types = cols(year = col_character(),
                               month = col_character())) %>%
       dplyr::mutate(conDate = as.numeric(paste(year,month,sep=''))) %>%
