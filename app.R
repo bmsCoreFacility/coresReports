@@ -16,6 +16,7 @@ library('RColorBrewer')
 library('bslib')
 library('bsicons')
 library('shinyWidgets')
+library('DT')
 ######################################################################
 ######################################################################
 
@@ -25,7 +26,7 @@ library('shinyWidgets')
 ##set up the design elements
 cards = list(
   card(
-    card_header("Notes for selected date",
+    card_header("Notes for the selected date",
                 tooltip(
                   bs_icon("info-circle"),
                   "Notes for the selected date."
@@ -51,19 +52,50 @@ cards = list(
     title = "Ranged date expenses",
     nav_panel("Total", plotOutput("expenseDateRange")),
     nav_panel("Itemized", plotOutput("itemizedExpenseDateRange"))
+  ),
+  card(
+    card_header("Information for selected date plots",
+                tooltip(
+                  bs_icon("info-circle"),
+                  "Details on the selected date plots."
+                )),
+    textOutput("selectedDateInfo")
+  ),
+  card(
+    card_header("Information for ranged date plots",
+                tooltip(
+                  bs_icon("info-circle"),
+                  "Details on the ranged date plots."
+                )),
+    textOutput("rangedDateInfo")
+  ),
+  card(
+    card_header("Income table data for ranged date plots",
+                tooltip(
+                  bs_icon("info-circle"),
+                  "Select items in the table to update the itemized plots."
+                )),
+    DT::dataTableOutput("rangedDateIncomeTable")
+  ),
+  card(
+    card_header("Expense table data for ranged date plots",
+                tooltip(
+                  bs_icon("info-circle"),
+                  "Select items in the table to update the itemized plots."
+                )),
+    DT::dataTableOutput("rangedDateExpenseTable")
   )
 )
 
 ##core selector values
 coreNames = data.frame('CORE' = c('bms',
-                                  'brain tissue bank',
+                                  'brainTissueBank',
                                   'cmdi',
-                                  'electron microscopy',
+                                  'electronMicroscopy',
                                   'flow',
                                   'genomics',
                                   'histology',
-                                  'zebrafish',
-                                  'combined'))
+                                  'zebrafish'))
 
 ######################################################################
 ######################################################################
@@ -94,9 +126,9 @@ ui = page_sidebar(
   ),
   ##page
   layout_columns(
-    row_heights = c(0.75,0.75,0.75),
-    col_widths = c(6,6,6,6,12),
-    cards[[2]], cards[[3]], cards[[4]], cards[[5]], cards[[1]]
+    row_heights = c(0.3,1,0.4,1,1,0.75),
+    col_widths = c(12,6,6,12,6,6,6,6,12),
+    cards[[6]],cards[[2]], cards[[3]], cards[[7]], cards[[4]], cards[[5]], cards[[8]], cards[[9]], cards[[1]]
   )
 )
 
@@ -117,7 +149,7 @@ server = function(input, output) {
     read_tsv('coresMonthlyReportsData.tsv', show_col_types = FALSE,
              col_types = cols(year = col_character(),
                               month = col_character())) %>%
-      dplyr::mutate(conDate = as.numeric(paste(year,month,sep=''))) %>%
+      dplyr::mutate(conDate = as.numeric(paste(year,sub('m(.*)','\\1',month),sep=''))) %>%
       dplyr::filter(core == coreValue())
   })
   
@@ -243,18 +275,32 @@ server = function(input, output) {
   output$incomeDateRange = renderPlot(incomeDateRangePlot())
   #
   incomeDateRangeItemizedPlot = reactive({
-    ggplot(incomeRangeData(), aes(conDate, value, group = itemNote, fill = itemNote)) +
-      geom_col(linewidth = 1, color = brewer.pal(4,'Greys')[4], width = 0.5, position = 'dodge') +
-      labs(x = "Date", y = "Value ($CAD)") +
-      scale_fill_manual(values = c(brewer.pal(12,'Paired'))) +
-      theme_bw() +
-      theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
-            axis.text.y = element_text(size = 12),
-            axis.title.x = element_blank(),
-            axis.title.y = element_text(size = 14),
-            legend.title = element_blank(),
-            legend.text = element_text(size = 12),
-            legend.margin=margin(c(1,1,1,1)))
+    incomeItemIndex = input$rangedDateIncomeTable_rows_selected
+    if(length(incomeItemIndex)){
+      incomeItemName = incomeRangeData()[incomeItemIndex,"itemNote"]
+      itemFilteredIncomeRangeData = dplyr::filter(incomeRangeData(), grepl(incomeItemName, itemNote))
+      ggplot(itemFilteredIncomeRangeData, aes(conDate, value, group = itemNote)) +
+        geom_line(color = brewer.pal(4,'BuGn')[3], linewidth = 1) +
+        #scale_y_continuous(limits = c(0,max(itemFilteredIncomeRangeData$value)+250), breaks = seq(0,max(itemFilteredIncomeRangeData$value),max(itemFilteredIncomeRangeData$value)/10)) +
+        scale_y_continuous(limits = c(0,max(itemFilteredIncomeRangeData$value)+250)) +
+        labs(x = paste(incomeItemName), y = "Value ($CAD)") +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
+              axis.text.y = element_text(size = 12),
+              #axis.title.x = element_blank(),
+              axis.title.y = element_text(size = 14),
+              legend.position = "none")
+    } else {
+      ggplot(incomeRangeData(), aes(conDate, value, group = itemNote)) +
+        geom_line(color = brewer.pal(4,'BuGn')[3], linewidth = 1) +
+        labs(x = "Date", y = "Value ($CAD)") +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
+              axis.text.y = element_text(size = 12),
+              axis.title.x = element_blank(),
+              axis.title.y = element_text(size = 14),
+              legend.position = "none")
+    }
   })
   #
   output$itemizedIncomeDateRange = renderPlot(incomeDateRangeItemizedPlot())
@@ -284,21 +330,62 @@ server = function(input, output) {
   output$expenseDateRange = renderPlot(expenseDateRangePlot())
   #
   expenseDateRangeItemizedPlot = reactive({
-    ggplot(expenseRangeData(), aes(conDate, value, group = itemNote, fill = itemNote)) +
-      geom_col(linewidth = 1, color = brewer.pal(4,'Greys')[4], width = 0.5, position = 'dodge') +
-      labs(x = "Date", y = "Value ($CAD)") +
-      scale_fill_manual(values = c(brewer.pal(12,'Paired'))) +
-      theme_bw() +
-      theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
-            axis.text.y = element_text(size = 12),
-            axis.title.x = element_blank(),
-            axis.title.y = element_text(size = 14),
-            legend.title = element_blank(),
-            legend.text = element_text(size = 12),
-            legend.margin=margin(c(1,1,1,1)))
+    expenseItemIndex = input$rangedDateExpenseTable_rows_selected
+    if(length(expenseItemIndex)){
+      expenseItemName = expenseRangeData()[expenseItemIndex,"itemNote"]
+      itemFilteredExpenseRangeData = dplyr::filter(expenseRangeData(), grepl(expenseItemName, itemNote))
+      ggplot(itemFilteredExpenseRangeData, aes(conDate, value, group = itemNote)) +
+        geom_line(color = brewer.pal(4,'OrRd')[3], linewidth = 1) +
+        scale_y_continuous(limits = c(0,max(itemFilteredExpenseRangeData$value)+250)) +
+        labs(x = paste(expenseItemName), y = "Value ($CAD)") +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
+              axis.text.y = element_text(size = 12),
+              #axis.title.x = element_blank(),
+              axis.title.y = element_text(size = 14),
+              legend.position = "none")
+    } else {
+      ggplot(expenseRangeData(), aes(conDate, value, group = itemNote)) +
+        geom_line(color = brewer.pal(4,'OrRd')[3], linewidth = 1) +
+        labs(x = "Date", y = "Value ($CAD)") +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
+              axis.text.y = element_text(size = 12),
+              #axis.title.x = element_blank(),
+              axis.title.y = element_text(size = 14),
+              legend.position = "none")
+    }
   })
   #
   output$itemizedExpenseDateRange = renderPlot(expenseDateRangeItemizedPlot())
+  
+  
+  
+  ######################
+  ##below is the table data
+  incomeRangeTableData = reactive({
+    dplyr::filter(inputData(),
+                  (itemCategory == 'income' & conDate >= rangeStart() & conDate <= rangeEnd())
+    ) %>%
+      dplyr::mutate(conDate = factor(conDate)) %>%
+      dplyr::select(-conDate, -month, -year, -core, -value) %>%
+      unique()
+  })
+  #
+  output$rangedDateIncomeTable = DT::renderDataTable({datatable(incomeRangeTableData(), selection = 'single', rownames = FALSE)})
+  
+  ##
+  expenseRangeTableData = reactive({
+    dplyr::filter(inputData(),
+                  (itemCategory == 'expense' & conDate >= rangeStart() & conDate <= rangeEnd())
+    ) %>%
+      dplyr::mutate(conDate = factor(conDate)) %>%
+      dplyr::select(-conDate, -month, -year, -core, -value) %>%
+      unique()
+  })
+  #
+  output$rangedDateExpenseTable = DT::renderDataTable({datatable(expenseRangeTableData(), selection = 'single', rownames = FALSE)})
+  
   
   
   ######################
@@ -312,6 +399,15 @@ server = function(input, output) {
   })
   #
   output$noteData = renderTable(notesData(), colnames = FALSE)
+  
+  
+  ######################
+  ##below is the information for the dates
+  selectedDateInfoText = "The selected date plots below are based on the Date dropdown box in the sidebar menu. It will only use information about the month and year, so you can select any date in that month you wish. Use the Total and Itemized tabs to switch between plot types."
+  output$selectedDateInfo = renderText(selectedDateInfoText)
+  #
+  rangedDateInfoText = "The ranged date plots below are based on the Date range dropdown box in the sidebar menu. It will only use information about the month and year, so you can select any date in that month you wish. Use the Total and Itemized tabs to switch between plot types. By default, in the itemized plots it will show all items, which can be a bit messy. If you would like to display specific items, click on the item you are interested in in the table below to update the plot."
+  output$rangedDateInfo = renderText(rangedDateInfoText)
 
 }
 ######################################################################

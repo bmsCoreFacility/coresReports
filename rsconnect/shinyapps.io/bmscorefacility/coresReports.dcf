@@ -5,7 +5,7 @@ account: bmscorefacility
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 11031692
-bundleId: 8183905
+bundleId: 8239059
 url: https://bmscorefacility.shinyapps.io/coresReports/
 version: 1
 asMultiple: FALSE
