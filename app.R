@@ -11,6 +11,7 @@
 ##libraries
 library('shiny')
 library('tidyverse')
+library('readxl')
 library('ggplot2')
 library('RColorBrewer')
 library('bslib')
@@ -146,12 +147,25 @@ server = function(input, output) {
   
   ##baseline input data processing
   inputData = reactive({
-    read_tsv('coresMonthlyReportsData.tsv', show_col_types = FALSE,
-             col_types = cols(year = col_character(),
-                              month = col_character())) %>%
+    read_excel('coresMonthlyReportsData.xlsx',
+             #col_types = cols(year = col_character(),
+              #                month = col_character())
+             col_types = c('text','text','text','text','text','numeric')) %>%
       dplyr::mutate(conDate = as.numeric(paste(year,sub('m(.*)','\\1',month),sep=''))) %>%
-      dplyr::filter(core == coreValue())
+      dplyr::filter(core == coreValue()) %>%
+      dplyr::group_by(core, year, month, itemCategory, itemNote, conDate) %>%
+      dplyr::summarise(value = sum(value, na.rm = TRUE)) %>%
+      dplyr::ungroup()
   })
+  
+  
+  
+  #####################
+  ##some colors for the itemized plots
+  greenRamp = colorRampPalette(brewer.pal(6,'Greens'))
+  redRamp = colorRampPalette(brewer.pal(6,'Reds'))               
+                   
+  
   
   ######################
   ##below is for the set date analysis
@@ -164,14 +178,15 @@ server = function(input, output) {
   ##generate the income data
   incomeData = reactive({
     dplyr::filter(inputData(), 
-                  (itemCategory == 'income' & conDate == currentDate())
-    )
+                  (itemCategory == 'income' & conDate == currentDate())) %>%
+    dplyr::arrange(-value) %>%
+    dplyr::mutate(itemNote = factor(itemNote, levels = c(unique(itemNote))))
   })
   #
   incomeDatePlot = reactive({
     ggplot(incomeData(), aes(itemCategory, value, fill = itemCategory)) +
-      geom_col(linewidth = 1, color = brewer.pal(4,'Greys')[4], width = 0.5) +
-      scale_fill_manual(values = c(brewer.pal(4,'BuGn')[3])) +
+      geom_col(linewidth = 1, color = brewer.pal(6,'Greys')[6], width = 0.5) +
+      scale_fill_manual(values = c(brewer.pal(3,'Greens')[3])) +
       labs(x = 'Type', y = 'Value ($CAD)') +
       theme_bw() +
       theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
@@ -185,8 +200,9 @@ server = function(input, output) {
   #
   incomeItemizedDatePlot = reactive({
     ggplot(incomeData(), aes(itemNote, value, fill = itemNote)) +
-      geom_col(linewidth = 1, color = brewer.pal(4,'Greys')[4], width = 0.5) +
-      scale_fill_manual(values = c(brewer.pal(12,'Paired'))) +
+      geom_col(linewidth = 1, color = brewer.pal(6,'Greys')[6], width = 0.5) +
+      #scale_fill_manual(values = c(brewer.pal(12,'Paired'))) +
+      scale_fill_manual(values = rev(greenRamp(length(unique(incomeData()$itemNote))))) +
       labs(x = 'Type', y = 'Value ($CAD)') +
       theme_bw() +
       theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
@@ -201,14 +217,15 @@ server = function(input, output) {
   ##generate the expense data
   expenseData = reactive({
     dplyr::filter(inputData(), 
-                  (itemCategory == 'expense' & conDate == currentDate())
-    )
+                  (itemCategory == 'expense' & conDate == currentDate())) %>%
+      dplyr::arrange(-value) %>%
+      dplyr::mutate(itemNote = factor(itemNote, levels = c(unique(itemNote))))
   })
   #
   expenseDatePlot = reactive({
     ggplot(expenseData(), aes(itemCategory, value, fill = itemCategory)) +
-      geom_col(linewidth = 1, color = brewer.pal(4,'Greys')[4], width = 0.5) +
-      scale_fill_manual(values = c(brewer.pal(4,'OrRd')[3])) +
+      geom_col(linewidth = 1, color = brewer.pal(6,'Greys')[6], width = 0.5) +
+      scale_fill_manual(values = c(brewer.pal(3,'Reds')[3])) +
       labs(x = 'Type', y = 'Value ($CAD)') +
       theme_bw() +
       theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
@@ -222,8 +239,9 @@ server = function(input, output) {
   #
   expenseItemizedDatePlot = reactive({
     ggplot(expenseData(), aes(itemNote, value, fill = itemNote)) +
-      geom_col(linewidth = 1, color = brewer.pal(4,'Greys')[4], width = 0.5) +
-      scale_fill_manual(values = c(brewer.pal(12,'Paired'))) +
+      geom_col(linewidth = 1, color = brewer.pal(6,'Greys')[6], width = 0.5) +
+      #scale_fill_manual(values = c(brewer.pal(12,'Paired'))) +
+      scale_fill_manual(values = rev(redRamp(length(unique(expenseData()$itemNote))))) +
       labs(x = 'Type', y = 'Value ($CAD)') +
       theme_bw() +
       theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
@@ -260,7 +278,7 @@ server = function(input, output) {
   #
   incomeDateRangePlot = reactive({
     ggplot(incomeRangeData(), aes(conDate, value)) +
-      geom_col(linewidth = 1, color = brewer.pal(4,'Greys')[4], fill = brewer.pal(4,'BuGn')[3], width = 0.5) +
+      geom_col(linewidth = 1, color = brewer.pal(6,'Greys')[6], fill = brewer.pal(3,'Greens')[3], width = 0.5) +
       labs(x = "Date", y = "Value ($CAD)") +
       theme_bw() +
       theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
@@ -280,7 +298,7 @@ server = function(input, output) {
       incomeItemName = incomeRangeData()[incomeItemIndex,"itemNote"]
       itemFilteredIncomeRangeData = dplyr::filter(incomeRangeData(), grepl(incomeItemName, itemNote))
       ggplot(itemFilteredIncomeRangeData, aes(conDate, value, group = itemNote)) +
-        geom_line(color = brewer.pal(4,'BuGn')[3], linewidth = 1) +
+        geom_line(color = brewer.pal(3,'Blues')[3], linewidth = 1) +
         #scale_y_continuous(limits = c(0,max(itemFilteredIncomeRangeData$value)+250), breaks = seq(0,max(itemFilteredIncomeRangeData$value),max(itemFilteredIncomeRangeData$value)/10)) +
         scale_y_continuous(limits = c(0,max(itemFilteredIncomeRangeData$value)+250)) +
         labs(x = paste(incomeItemName), y = "Value ($CAD)") +
@@ -292,7 +310,7 @@ server = function(input, output) {
               legend.position = "none")
     } else {
       ggplot(incomeRangeData(), aes(conDate, value, group = itemNote)) +
-        geom_line(color = brewer.pal(4,'BuGn')[3], linewidth = 1) +
+        geom_line(color = brewer.pal(3,'Blues')[3], linewidth = 1) +
         labs(x = "Date", y = "Value ($CAD)") +
         theme_bw() +
         theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
@@ -315,7 +333,7 @@ server = function(input, output) {
   #
   expenseDateRangePlot = reactive({
     ggplot(expenseRangeData(), aes(conDate, value)) +
-      geom_col(linewidth = 1, color = brewer.pal(4,'Greys')[4], fill = brewer.pal(4,'OrRd')[3], width = 0.5) +
+      geom_col(linewidth = 1, color = brewer.pal(6,'Greys')[6], fill = brewer.pal(3,'Reds')[3], width = 0.5) +
       labs(x = "Date", y = "Value ($CAD)") +
       theme_bw() +
       theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
@@ -335,7 +353,7 @@ server = function(input, output) {
       expenseItemName = expenseRangeData()[expenseItemIndex,"itemNote"]
       itemFilteredExpenseRangeData = dplyr::filter(expenseRangeData(), grepl(expenseItemName, itemNote))
       ggplot(itemFilteredExpenseRangeData, aes(conDate, value, group = itemNote)) +
-        geom_line(color = brewer.pal(4,'OrRd')[3], linewidth = 1) +
+        geom_line(color = brewer.pal(3,'Reds')[3], linewidth = 1) +
         scale_y_continuous(limits = c(0,max(itemFilteredExpenseRangeData$value)+250)) +
         labs(x = paste(expenseItemName), y = "Value ($CAD)") +
         theme_bw() +
@@ -346,7 +364,7 @@ server = function(input, output) {
               legend.position = "none")
     } else {
       ggplot(expenseRangeData(), aes(conDate, value, group = itemNote)) +
-        geom_line(color = brewer.pal(4,'OrRd')[3], linewidth = 1) +
+        geom_line(color = brewer.pal(3,'Reds')[3], linewidth = 1) +
         labs(x = "Date", y = "Value ($CAD)") +
         theme_bw() +
         theme(axis.text.x = element_text(angle = 25, hjust = 1, size = 12),
