@@ -5,9 +5,8 @@ account: bmscorefacility
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 11031692
-bundleId: 8445365
+bundleId: 8825914
 url: https://bmscorefacility.shinyapps.io/coresReports/
 version: 1
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: coresMonthlyReportsData_202403.xlsx|README.md
